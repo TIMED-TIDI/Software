@@ -29,7 +29,9 @@ last = base + dt.timedelta(seconds = time[-1])
 print(first)
 print(last)
 
-nPts = 100
+# Need to make this into a function that returns the LOS data
+# as a dictionary for each telescope.
+# remove all of the bad data in this function too.
 
 iStart = 0
 iEnd = 12000
@@ -103,6 +105,9 @@ if (iPlotType == 0):
 else:
 
     #plt.plot(times,alt,'b.')
+
+    # can we figure out how to plot two telescopes here, both on the
+    # same side of the S/C, so that we can get real wind vectors?
 
     scale = 1.0 / 40.0
     plt.plot(lon[(alt>250)],lat[(alt>250)],'bo')
