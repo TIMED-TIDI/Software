@@ -4,103 +4,177 @@ from netCDF4 import Dataset
 import datetime as dt
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
-file = "TIDI_PB_2021001_P0500_S0651_D010_R01.LOS"
-file = "TIDI_PB_2021003_P0500_S0704_D011_R01.LOS"
-ncfile = Dataset(file, 'r')
+# ----------------------------------------------------------------------
+# Function to parse input arguments
+# ----------------------------------------------------------------------
 
-print(ncfile)
+def parse_args():
 
-print("Variables in file : ")
-for var in ncfile.variables.values():
-    print(var.name)
+    parser = argparse.ArgumentParser(description = 'Process TIDI data files.')
+    parser.add_argument('files', metavar = 'file', nargs = '+', \
+                        help = 'Files to process')
+    parser.add_argument('--foo', nargs='?', help='foo help', \
+                        default='blah')
+    parser.add_argument('--alt', '-alt', nargs=1, \
+                        help='altitude to plot (km)', \
+                        default=95.0, type = float)
+    parser.add_argument('--latplot', '-latplot', \
+                        help='Make a lat vs time plot', action='store_true')
+    parser.add_argument('--altplot', '-altplot', \
+                        help='Make a scatter plot of LOS wind vs alt', \
+                        action='store_true')
 
-date = ncfile.variables['ut_date']
-print(date)
-nlos, nchars = date.shape
+    args = parser.parse_args()
 
-time = np.double(np.array(ncfile.variables['time'][:]))
-print(time[0]/(365.25*86400.0))
+    return args
 
-base = dt.datetime(year = 1980, month = 1, day = 6)
-first = base + dt.timedelta(seconds = time[0])
-last = base + dt.timedelta(seconds = time[-1])
+# ----------------------------------------------------------------------
+# Main Code
+# ----------------------------------------------------------------------
 
-print(first)
-print(last)
+def convert_to_datetime(intime):
 
-# Need to make this into a function that returns the LOS data
-# as a dictionary for each telescope.
-# remove all of the bad data in this function too.
+    intimearray = np.array(intime, dtype='float64')
+    outtime = []
+    base = dt.datetime(year = 1980, month = 1, day = 6)
+    for t in intimearray:
+        outtime.append(base + dt.timedelta(seconds = t))
 
-iStart = 0
-iEnd = 12000
+    return outtime
+    
+# ----------------------------------------------------------------------
+# Read TIDI Data
+# ----------------------------------------------------------------------
 
-sc_lat = np.array(ncfile.variables['sc_lat'][:])[iStart:iEnd]
-sc_lon = np.array(ncfile.variables['sc_lon'][:])[iStart:iEnd]
-tp_lat = np.array(ncfile.variables['tp_lat'][:])[iStart:iEnd]
-tp_lon = np.array(ncfile.variables['tp_lon'][:])[iStart:iEnd]
-tp_alt = np.array(ncfile.variables['tp_alt'][:])[iStart:iEnd]
-tel_id = np.array(ncfile.variables['tel_id'][:])[iStart:iEnd]
-print(tel_id)
+def read_tidi_data(file):
 
-t_doppler = np.array(ncfile.variables['t_doppler'][:])[iStart:iEnd]
-t_rot = np.array(ncfile.variables['t_rot'][:])[iStart:iEnd]
-s_los = np.array(ncfile.variables['s'][:])[iStart:iEnd]
-s_var = np.array(ncfile.variables['var_s'][:])[iStart:iEnd]
-p_status = np.array(ncfile.variables['p_status'][:])[iStart:iEnd]
-table_index = np.array(ncfile.variables['table_index'][:])[iStart:iEnd]
-los_dir = np.array(ncfile.variables['los_direction'][:])[iStart:iEnd]
+    ncfile = Dataset(file, 'r')
 
-print(los_dir)
+    #print("Variables in file : ")
+    #for var in ncfile.variables.values():
+    #    print(var.name)
+
+    #time = np.double(np.array(ncfile.variables['time'][:]))
+    #print(time[0]/(365.25*86400.0))
+    #
+    #first = base + dt.timedelta(seconds = time[0])
+    #last = base + dt.timedelta(seconds = time[-1])
+
+    alltimes = np.array(ncfile.variables['time'][:], dtype='float64')
+
+    #angles = 315 (5), 225 (4), 135 (3), 45 (2), 405 - cal (1)
+    angles = [45, 135, 225, 314, 405]
+    
+    sc_lat = np.array(ncfile.variables['sc_lat'][:])
+    tel_id = np.array(ncfile.variables['tel_id'][:])
+
+    sc_lat = np.array(ncfile.variables['sc_lat'][:])
+    sc_lon = np.array(ncfile.variables['sc_lon'][:])
+    tp_lat = np.array(ncfile.variables['tp_lat'][:])
+    tp_lon = np.array(ncfile.variables['tp_lon'][:])
+    tp_alt = np.array(ncfile.variables['tp_alt'][:])
+    tel_id = np.array(ncfile.variables['tel_id'][:])
+    t_doppler = np.array(ncfile.variables['t_doppler'][:])
+    t_rot = np.array(ncfile.variables['t_rot'][:])
+    s_los = np.array(ncfile.variables['s'][:])
+    s_var = np.array(ncfile.variables['var_s'][:])
+    p_status = np.array(ncfile.variables['p_status'][:])
+    table_index = np.array(ncfile.variables['table_index'][:])
+    los_dir = np.array(ncfile.variables['los_direction'][:])
+
+    times = {}
+    tplon = {}
+    tplat = {}
+    tpalt = {}
+    sclon = {}
+    sclat = {}
+    scalt = {}
+    tdop = {}
+    trot = {}
+    los = {}
+    dir = {}
+    var = {}
+    
+    for a in angles:
+        tmp = alltimes[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        times[a] = convert_to_datetime(tmp)
+        tplon[a] = tp_lon[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        tplat[a] = tp_lat[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        tpalt[a] = tp_alt[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        sclon[a] = sc_lon[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        sclat[a] = sc_lat[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        scalt[a] = tpalt[a]
+        tdop[a] = t_doppler[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        trot[a] = t_rot[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        los[a] = s_los[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        dir[a] = los_dir[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        var[a] = np.sqrt(s_var[(sc_lon>0) & (tel_id == a) & (p_status == 0)])
+
+    ncfile.close()
+    data = {'times' : times,
+            'tplon' : tplon,
+            'tplat' : tplat,
+            'tpalt' : tpalt,
+            'sclon' : sclon,
+            'sclat' : sclat,
+            'scalt' : scalt,
+            'tdop' : tdop,
+            'trot' : trot,
+            'los' : los,
+            'dir' : dir,
+            'var' : var}
+
+    return data
+    
+# ----------------------------------------------------------------------
+# Main Code
+# ----------------------------------------------------------------------
 
 
-subtime = time[iStart:iEnd]
+args = parse_args()
+print(args.files)
+print(args.alt)
+print(args.latplot)
 
-ncfile.close()
+file = args.files[-1]
 
-angle = 45
+tididata = read_tidi_data(file)
 
-# According to documents:
-# angles = 315 (5), 225 (4), 135 (3), 45 (2), 405 - cal (1)
+iS = 0
+iE = 1000
 
-#plt.scatter(lon, lat)
-#
-tplon = tp_lon[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-tplat = tp_lat[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-tpalt = tp_alt[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
+angle = 135
 
-lon = sc_lon[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-lat = sc_lat[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-alt  = tpalt
-tdop = t_doppler[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-trot = t_rot[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-los = s_los[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-dir = los_dir[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-var = np.sqrt(s_var[(sc_lon>0) & (tel_id == angle) & (p_status == 0)])
+tplon = tididata["tplon"][angle][iS:iE]
+tplat = tididata["tplat"][angle][iS:iE]
+tpalt = tididata["tpalt"][angle][iS:iE]
+lon = tididata["sclon"][angle][iS:iE]
+lat = tididata["sclat"][angle][iS:iE]
+alt  = tididata["scalt"][angle][iS:iE]
+tdop = tididata["tdop"][angle][iS:iE]
+trot = tididata["trot"][angle][iS:iE]
+los = tididata["los"][angle][iS:iE]
+dir = tididata["dir"][angle][iS:iE]
+var = tididata["var"][angle][iS:iE]
+times = tididata["times"][angle][iS:iE]
 
-
-subsubtime = subtime[(sc_lon>0) & (tel_id == angle) & (p_status == 0)]
-
-times = []
-for t in subsubtime:
-    times.append(base + dt.timedelta(seconds = t))
-
-iPlotType = 0
 maxi = 500.0
 
-if (iPlotType == 0):    
+if (args.altplot):    
     
-    plt.plot(los,alt,'bo')
-    plt.xlim(-maxi,maxi)
 
     for i,l in enumerate(los):
-        if (np.abs(l) < maxi):
+        if ((np.abs(l) < maxi) and (np.abs(l) > var[i])):
+            print(l,var[i])
+            plt.plot([l], alt[i], 'bo')
             a = alt[i]
             v = var[i]
             x = [l-v, l+v]
             y = [a, a]
             plt.plot(x,y,'r')
+    plt.xlim(-maxi,maxi)
     
 else:
 
@@ -110,28 +184,40 @@ else:
     # same side of the S/C, so that we can get real wind vectors?
 
     scale = 1.0 / 40.0
-    plt.plot(lon[(alt>250)],lat[(alt>250)],'bo')
-    plt.plot(tplon[(alt>250)],tplat[(alt>250)],'r.')
 
     for i,l in enumerate(los):
         a = alt[i]
-        if ((np.abs(l) < maxi) & (a>250)):
+        v = var[i]
+        if ((np.abs(l) < maxi) & (a>250) & (np.abs(l) > v)):
             la = tplat[i]
             lo = tplon[i]
+            print(la, lo, dir[i])
+
+            plt.plot(lon[i],lat[i],'bo')
+            plt.plot(tplon[i],tplat[i],'r.')
+
+
             d = dir[i] * np.pi / 180.0
-            dx = l * scale * np.sin(d) / np.abs(np.cos(lat[i] * np.pi / 180.0))
-            dy = l * scale * np.cos(d)
-            x = [lo, lo + dx]
-            y = [la, la + dy]
+            dx = np.sin(d) / np.abs(np.cos(lat[i] * np.pi / 180.0))
+            dy = np.cos(d)
+
+            dr = np.sqrt(dx*dx + dy*dy)
+            xhat = dx/dr
+            yhat = dy/dr
+            vx = l * scale * xhat
+            vy = l * scale * yhat
+            x = [lo, lo + vx]
+            y = [la, la + vy]
             plt.plot(x,y,'r')
 
+            scla = lat[i]
+            sclo = lon[i]
+            x = [sclo, lo]
+            y = [scla, la]
+            #plt.plot(x,y,'g')
+
+    plt.axes().set_aspect('equal')
             
-#plt.plot(var,alt,'r.')
-
-
-#print(times)
-
-#plt.scatter(tp_lon[sc_lon>0], tp_lat[sc_lon>0],'r.')
 plt.show()
 
 
