@@ -65,7 +65,7 @@ def read_tidi_data(file):
     alltimes = np.array(ncfile.variables['time'][:], dtype='float64')
 
     #angles = 315 (5), 225 (4), 135 (3), 45 (2), 405 - cal (1)
-    angles = [45, 135, 225, 314, 405]
+    angles = [45, 135, 225, 315, 405]
     
     sc_lat = np.array(ncfile.variables['sc_lat'][:])
     tel_id = np.array(ncfile.variables['tel_id'][:])
