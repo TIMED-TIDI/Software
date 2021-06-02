@@ -65,7 +65,7 @@ def read_tidi_data(file):
     alltimes = np.array(ncfile.variables['time'][:], dtype='float64')
 
     #angles = 315 (5), 225 (4), 135 (3), 45 (2), 405 - cal (1)
-    angles = [45, 135, 225, 314, 405]
+    angles = [45, 135, 225, 315, 405]
     
     sc_lat = np.array(ncfile.variables['sc_lat'][:])
     tel_id = np.array(ncfile.variables['tel_id'][:])
@@ -83,7 +83,11 @@ def read_tidi_data(file):
     p_status = np.array(ncfile.variables['p_status'][:])
     table_index = np.array(ncfile.variables['table_index'][:])
     los_dir = np.array(ncfile.variables['los_direction'][:])
-
+    asc_flag = np.array(ncfile.variables['ascending'][:])
+    asc_flag = asc_flag.astype('U13')
+    sc_sza = np.array(ncfile.variables['sc_sza'][:])
+    tp_sza = np.array(ncfile.variables['tp_sza'][:])
+        
     times = {}
     tplon = {}
     tplat = {}
@@ -96,6 +100,9 @@ def read_tidi_data(file):
     los = {}
     dir = {}
     var = {}
+    ascflag = {}
+    scsza = {}
+    tpsza = {}
     
     for a in angles:
         tmp = alltimes[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
@@ -111,6 +118,9 @@ def read_tidi_data(file):
         los[a] = s_los[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
         dir[a] = los_dir[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
         var[a] = np.sqrt(s_var[(sc_lon>0) & (tel_id == a) & (p_status == 0)])
+        ascflag[a] = asc_flag[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        scsza[a] = sc_sza[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
+        tpsza[a] = tp_sza[(sc_lon>0) & (tel_id == a) & (p_status == 0)]
 
     ncfile.close()
     data = {'times' : times,
