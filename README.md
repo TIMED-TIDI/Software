@@ -10,13 +10,13 @@ This repository is aimed at giving access to all data processing codes
 used for the TIDI project.
 
 Level 1, line-of-sight data is available here:
-ftp://tidi.engin.umich.edu/tidi/los/
+https://cdaweb.gsfc.nasa.gov/pub/data/timed/tidi/los/
 
 Level 2, profiles of the winds, are available here:
-ftp://tidi.engin.umich.edu/tidi/profile/
+https://cdaweb.gsfc.nasa.gov/pub/data/timed/tidi/profile/
 
 Level 3, maps of wind vectors, are available here:
-ftp://tidi.engin.umich.edu/tidi/vector/
+https://cdaweb.gsfc.nasa.gov/pub/data/timed/tidi/vector/
 
 Currently, we are working on creating python code that will help with
 the analysis and visualization of these data sets. As we develop this
